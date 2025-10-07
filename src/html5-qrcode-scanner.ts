@@ -160,6 +160,15 @@ export interface Html5QrcodeScannerConfig
      * }
      */
     languagePack?: LanguagePack | undefined;
+
+    /**
+     * If `true`, the scanner will automatically select and start using
+     * a back-facing camera (environment camera) if available when permissions
+     * are already granted. Users can still switch cameras after scanning starts.
+     *
+     * Note: default value is `false`.
+     */
+    preferBackCamera?: boolean | undefined;
 }
 
 function toHtml5QrcodeCameraScanConfig(config: Html5QrcodeScannerConfig)
@@ -730,6 +739,55 @@ export class Html5QrcodeScanner {
             parent, showOnRender, onFileSelected);
     }
 
+    /**
+     * Select the best camera based on configuration.
+     * Prioritizes back camera if preferBackCamera is enabled.
+     */
+    private selectBestCamera(cameras: Array<CameraDevice>): string | null {
+        if (cameras.length === 0) {
+            return null;
+        }
+
+        // Check if we should prefer back camera
+        if (this.config.preferBackCamera === true) {
+            // Try to find a back-facing camera
+            // Common patterns in camera labels for back cameras:
+            // - "back", "rear", "environment"
+            // - cameras without "front" or "user" in the label
+            const backCameraPatterns = /back|rear|environment/i;
+            const frontCameraPatterns = /front|user|face/i;
+
+            // First, try to find explicit back camera
+            for (const camera of cameras) {
+                const label = (camera.label || "").toLowerCase();
+                if (backCameraPatterns.test(label)) {
+                    return camera.id;
+                }
+            }
+
+            // If no explicit back camera found, try to find non-front camera
+            for (const camera of cameras) {
+                const label = (camera.label || "").toLowerCase();
+                if (!frontCameraPatterns.test(label)) {
+                    return camera.id;
+                }
+            }
+        }
+
+        // Check for last used camera
+        const lastUsedCameraId = this.persistedDataManager.getLastUsedCameraId();
+        if (lastUsedCameraId) {
+            for (const camera of cameras) {
+                if (camera.id === lastUsedCameraId) {
+                    return lastUsedCameraId;
+                }
+            }
+        }
+
+        // Default: return first camera
+        return cameras[0].id;
+    }
+
     private renderCameraSelection(cameras: Array<CameraDevice>) {
         const $this = this;
         const scpCameraScanRegion = document.getElementById(
@@ -767,6 +825,12 @@ export class Html5QrcodeScanner {
 
         let cameraSelectUi: CameraSelectionUi = CameraSelectionUi.create(
             scpCameraScanRegion, cameras);
+
+        // Select best camera based on configuration
+        const selectedCameraId = this.selectBestCamera(cameras);
+        if (selectedCameraId && cameraSelectUi.hasValue(selectedCameraId)) {
+            cameraSelectUi.setValue(selectedCameraId);
+        }
 
         // Camera Action Buttons.
         const cameraActionContainer = document.createElement("span");
@@ -881,8 +945,11 @@ export class Html5QrcodeScanner {
                 });
         });
 
-        if (cameraSelectUi.hasSingleItem()) {
-            // If there is only one camera, start scanning directly.
+        // Auto-start scanning in these cases:
+        // 1. Only one camera available
+        // 2. preferBackCamera is enabled (already selected best camera above)
+        if (cameraSelectUi.hasSingleItem() || this.config.preferBackCamera === true) {
+            // Start scanning directly with selected camera.
             cameraActionStartButton.click();
         }
 

@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Prefer Back Camera</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+        }
+        #reader {
+            margin: 20px auto;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>QR Code Scanner with Back Camera Preference</h1>
+
+    <div class="info">
+        <h3>How it works:</h3>
+        <ul>
+            <li>✅ Automatically selects back/rear camera if available</li>
+            <li>✅ Starts scanning immediately (no need to click "Start")</li>
+            <li>✅ You can still switch cameras using the dropdown</li>
+            <li>✅ Falls back to front camera if no back camera found</li>
+        </ul>
+    </div>
+
+    <div id="reader"></div>
+
+    <div class="result" id="result" style="display:none;">
+        <h3>Scan Result:</h3>
+        <p id="result-text"></p>
+    </div>
+
+    <script type="module">
+        import { Html5QrcodeScanner } from "../dist/esm/index.js";
+
+        function onScanSuccess(decodedText, decodedResult) {
+            console.log(`Scan result: ${decodedText}`, decodedResult);
+
+            // Show result
+            document.getElementById("result").style.display = "block";
+            document.getElementById("result-text").textContent = decodedText;
+        }
+
+        function onScanError(errorMessage) {
+            // Handle scan error (optional)
+            // console.warn(errorMessage);
+        }
+
+        const config = {
+            fps: 10,
+            qrbox: {
+                width: 250,
+                height: 250
+            },
+            // Enable back camera preference
+            // This will:
+            // 1. Auto-select back camera if available
+            // 2. Auto-start scanning immediately
+            preferBackCamera: true,
+
+            // Optional: show torch button if device supports it
+            showTorchButtonIfSupported: true
+        };
+
+        const scanner = new Html5QrcodeScanner("reader", config);
+        scanner.render(onScanSuccess, onScanError);
+    </script>
+</body>
+</html>
