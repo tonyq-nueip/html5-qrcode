@@ -752,25 +752,57 @@ export class Html5QrcodeScanner {
         if (this.config.preferBackCamera === true) {
             // Try to find a back-facing camera
             // Common patterns in camera labels for back cameras:
-            // - "back", "rear", "environment"
-            // - cameras without "front" or "user" in the label
-            const backCameraPatterns = /back|rear|environment/i;
-            const frontCameraPatterns = /front|user|face/i;
+            // - English: "back", "rear", "environment"
+            // - Chinese: "後置", "后置" (Traditional/Simplified)
+            //
+            // Common patterns for front cameras (to avoid):
+            // - English: "front", "user", "face"
+            // - Chinese: "前置"
+            //
+            // Special handling for Apple devices:
+            // - On iPhone/iPad, cameras are typically ordered: [front, back]
+            // - Labels might be empty or generic
+            // - Back camera is usually NOT the first one
+            const backCameraPatterns = /back|rear|environment|後置|后置/i;
+            const frontCameraPatterns = /front|user|face|前置/i;
 
-            // First, try to find explicit back camera
-            for (const camera of cameras) {
+            // Create a scoring system for cameras
+            const cameraScores: Array<{camera: CameraDevice, score: number}> = [];
+
+            for (let i = 0; i < cameras.length; i++) {
+                const camera = cameras[i];
                 const label = (camera.label || "").toLowerCase();
+                let score = 0;
+
+                // Positive scoring (prefer these)
                 if (backCameraPatterns.test(label)) {
-                    return camera.id;
+                    score += 100; // Explicit back camera
                 }
+
+                // Negative scoring (avoid these)
+                if (frontCameraPatterns.test(label)) {
+                    score -= 100; // Explicit front camera
+                }
+
+                // On mobile devices, if we have multiple cameras and no clear labels,
+                // prefer cameras that are NOT first (back camera is usually second)
+                if (cameras.length >= 2) {
+                    if (i === 0 && label === "") {
+                        score -= 10; // Likely front camera on mobile
+                    } else if (i > 0 && label === "") {
+                        score += 10; // Likely back camera on mobile
+                    }
+                }
+
+                cameraScores.push({ camera, score });
             }
 
-            // If no explicit back camera found, try to find non-front camera
-            for (const camera of cameras) {
-                const label = (camera.label || "").toLowerCase();
-                if (!frontCameraPatterns.test(label)) {
-                    return camera.id;
-                }
+            // Sort by score (highest first)
+            cameraScores.sort((a, b) => b.score - a.score);
+
+            // Return the highest scored camera
+            if (cameraScores.length > 0 && cameraScores[0].score > -100) {
+                return cameraScores[0].camera.id;
             }
         }
 
