@@ -26,7 +26,13 @@ export {
 } from "./core";
 export { Html5QrcodeScannerState } from "./state-manager";
 export { Html5QrcodeScanType } from "./core";
-export { 
+export {
     CameraCapabilities,
     CameraDevice
 } from "./camera/core";
+
+// i18n support
+export {
+    Html5QrcodeI18n,
+    LanguagePack
+} from "./i18n";

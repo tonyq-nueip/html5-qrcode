@@ -37,6 +37,9 @@ import {
     Html5QrcodeScannerStrings,
 } from "./strings";
 
+import { LanguagePack } from "./i18n";
+import { Html5QrcodeI18n } from "./i18n";
+
 import {
     ASSET_FILE_SCAN,
     ASSET_CAMERA_SCAN,
@@ -136,12 +139,27 @@ export interface Html5QrcodeScannerConfig
 
     /**
      * Default zoom value if supported.
-     * 
+     *
      * Note: default value is 1x.
-     * 
+     *
      * TODO(minhazav): Document this API, currently hidden.
      */
     defaultZoomValueIfSupported?: number | undefined;
+
+    /**
+     * Language pack for internationalization (i18n).
+     *
+     * Provide custom translations for all UI strings.
+     * If not provided, English will be used by default.
+     *
+     * @example
+     * {
+     *   scanningStatus: "掃描中",
+     *   scanButtonStartScanningText: "開始掃描",
+     *   scanButtonStopScanningText: "停止掃描"
+     * }
+     */
+    languagePack?: LanguagePack | undefined;
 }
 
 function toHtml5QrcodeCameraScanConfig(config: Html5QrcodeScannerConfig)
@@ -212,6 +230,11 @@ export class Html5QrcodeScanner {
         this.elementId = elementId;
         this.config = this.createConfig(config);
         this.verbose = verbose === true;
+
+        // Apply language pack if provided
+        if (config?.languagePack) {
+            Html5QrcodeI18n.setLanguage(config.languagePack);
+        }
 
         if (!document.getElementById(elementId)) {
             throw `HTML Element with id=${elementId} not found`;
